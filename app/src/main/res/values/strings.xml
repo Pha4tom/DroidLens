@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DroidLens</string>
+    <string name="hello_world">Hello, Material You!</string>
+    <string name="fab_description">Add</string>
+    <string name="fab_clicked">FAB clicked</string>
+</resources>
