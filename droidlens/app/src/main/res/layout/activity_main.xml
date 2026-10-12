@@ -46,7 +46,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="18dp">
+                android:padding="18dp"
+                android:animateLayoutChanges="true">
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -76,7 +77,6 @@
                     android:text="Pick an APK to begin analysis"
                     android:textColor="#8A8A8A"
                     android:textSize="13sp"
-                    android:fontFamily="sans-serif"
                     android:layout_marginTop="4dp" />
 
                 <LinearLayout
@@ -155,7 +155,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="18dp"
+                    android:animateLayoutChanges="true">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -202,6 +203,18 @@
                         android:fontFamily="monospace"
                         android:layout_marginTop="12dp"
                         android:lineSpacingExtra="4dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnFindingsShowAll"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:text="Show all"
+                        android:textColor="#FF00E5"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -220,7 +233,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="18dp"
+                    android:animateLayoutChanges="true">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -568,7 +582,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:animateLayoutChanges="true">
 
                     <LinearLayout
                         android:id="@+id/headerApkContents"
@@ -639,7 +654,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:animateLayoutChanges="true">
 
                     <LinearLayout
                         android:id="@+id/headerDex"
@@ -680,11 +696,11 @@
                             android:textSize="14sp" />
                     </LinearLayout>
 
-                    <ScrollView
+                    <LinearLayout
                         android:id="@+id/scrollDex"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:maxHeight="500dp"
+                        android:orientation="vertical"
                         android:paddingStart="18dp"
                         android:paddingEnd="18dp"
                         android:paddingBottom="18dp"
@@ -699,7 +715,192 @@
                             android:textSize="11sp"
                             android:fontFamily="monospace"
                             android:lineSpacingExtra="3dp" />
-                    </ScrollView>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDexShowAll"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end"
+                            android:text="Show all"
+                            android:textColor="#FF00E5"
+                            android:textSize="12sp"
+                            android:textAllCaps="false"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ NATIVE LIBRARIES ============ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#171717"
+                app:strokeColor="#262626"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:animateLayoutChanges="true">
+
+                    <LinearLayout
+                        android:id="@+id/headerNative"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="18dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="NATIVE LIBRARIES"
+                            android:textColor="#FF00E5"
+                            android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.2" />
+
+                        <TextView
+                            android:id="@+id/tvNativeSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#8A8A8A"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvNativeToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▸"
+                            android:textColor="#8A8A8A"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/scrollNative"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingBottom="18dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tvNative"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#F5F5F5"
+                            android:textSize="11sp"
+                            android:fontFamily="monospace"
+                            android:lineSpacingExtra="3dp" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnNativeShowAll"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end"
+                            android:text="Show all"
+                            android:textColor="#FF00E5"
+                            android:textSize="12sp"
+                            android:textAllCaps="false"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ FLUTTER ANALYSIS ============ -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardFlutter"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#171717"
+                app:strokeColor="#42A5F5"
+                app:strokeWidth="1.5dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:animateLayoutChanges="true">
+
+                    <LinearLayout
+                        android:id="@+id/headerFlutter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="18dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="FLUTTER ANALYSIS"
+                            android:textColor="#42A5F5"
+                            android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.2" />
+
+                        <TextView
+                            android:id="@+id/tvFlutterSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#8A8A8A"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvFlutterToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▸"
+                            android:textColor="#8A8A8A"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/scrollFlutter"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingBottom="18dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tvFlutter"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#F5F5F5"
+                            android:textSize="11sp"
+                            android:fontFamily="monospace"
+                            android:lineSpacingExtra="3dp"
+                            android:textIsSelectable="true" />
+                    </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -733,7 +934,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="18dp"
+                    android:animateLayoutChanges="true">
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -771,16 +973,118 @@
                         android:fontFamily="monospace"
                         android:layout_marginTop="10dp"
                         android:lineSpacingExtra="5dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPermissionsShowAll"
+                        style="@style/Widget.Material3.Button.TextButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:text="Show all"
+                        android:textColor="#FF00E5"
+                        android:textSize="12sp"
+                        android:textAllCaps="false"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ============ FEATURES ============ -->
+            <!-- ============ SECRETS & STRINGS ============ -->
             <com.google.android.material.card.MaterialCardView
-                android:id="@+id/cardFeatures"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="12dp"
-                android:visibility="gone"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#171717"
+                app:strokeColor="#FF3B30"
+                app:strokeWidth="1.5dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:animateLayoutChanges="true">
+
+                    <LinearLayout
+                        android:id="@+id/headerSecrets"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="18dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="SECRETS &amp; STRINGS"
+                            android:textColor="#FF3B30"
+                            android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.2" />
+
+                        <TextView
+                            android:id="@+id/tvSecretsSummary"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#8A8A8A"
+                            android:textSize="11sp"
+                            android:layout_marginEnd="8dp" />
+
+                        <TextView
+                            android:id="@+id/tvSecretsToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▸"
+                            android:textColor="#8A8A8A"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:id="@+id/scrollSecrets"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingBottom="18dp"
+                        android:visibility="gone">
+
+                        <TextView
+                            android:id="@+id/tvSecrets"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            android:textColor="#F5F5F5"
+                            android:textSize="11sp"
+                            android:fontFamily="monospace"
+                            android:lineSpacingExtra="3dp"
+                            android:textIsSelectable="true" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSecretsShowAll"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end"
+                            android:text="Show all"
+                            android:textColor="#FF00E5"
+                            android:textSize="12sp"
+                            android:textAllCaps="false"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- ============ FINGERPRINT ============ -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp"
                 app:cardBackgroundColor="#171717"
@@ -791,31 +1095,55 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:animateLayoutChanges="true">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="FEATURES"
-                        android:textColor="#FF00E5"
-                        android:textSize="10sp"
-                        android:fontFamily="sans-serif-medium"
-                        android:letterSpacing="0.2" />
-
-                    <TextView
-                        android:id="@+id/tvFeatures"
+                    <LinearLayout
+                        android:id="@+id/headerFingerprint"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="18dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="?attr/selectableItemBackground">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="FINGERPRINT &amp; SIGNING"
+                            android:textColor="#FF00E5"
+                            android:textSize="10sp"
+                            android:fontFamily="sans-serif-medium"
+                            android:letterSpacing="0.2" />
+
+                        <TextView
+                            android:id="@+id/tvFingerprintToggle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="▸"
+                            android:textColor="#8A8A8A"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:id="@+id/tvFingerprint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
+                        android:paddingBottom="18dp"
                         android:text="—"
                         android:textColor="#F5F5F5"
-                        android:textSize="12sp"
+                        android:textSize="11sp"
                         android:fontFamily="monospace"
-                        android:layout_marginTop="10dp"
-                        android:lineSpacingExtra="5dp" />
+                        android:lineSpacingExtra="4dp"
+                        android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ============ ATTACK SURFACE ============ -->
+            <!-- ============ ATTACK SURFACE + FUZZER ============ -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/cardAttackSurface"
                 android:layout_width="match_parent"
@@ -831,7 +1159,8 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="18dp">
+                    android:padding="18dp"
+                    android:animateLayoutChanges="true">
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -860,72 +1189,36 @@
                         android:fontFamily="monospace"
                         android:layout_marginTop="10dp"
                         android:lineSpacingExtra="4dp" />
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
 
-            <!-- ============ FINGERPRINT (collapsible) ============ -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="0dp"
-                app:cardBackgroundColor="#171717"
-                app:strokeColor="#262626"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:id="@+id/headerFingerprint"
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnRunFuzzer"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="horizontal"
-                        android:gravity="center_vertical"
-                        android:padding="18dp"
-                        android:clickable="true"
-                        android:focusable="true"
-                        android:background="?attr/selectableItemBackground">
-
-                        <TextView
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:text="FINGERPRINT &amp; SIGNING"
-                            android:textColor="#FF00E5"
-                            android:textSize="10sp"
-                            android:fontFamily="sans-serif-medium"
-                            android:letterSpacing="0.2" />
-
-                        <TextView
-                            android:id="@+id/tvFingerprintToggle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="▾"
-                            android:textColor="#8A8A8A"
-                            android:textSize="14sp" />
-                    </LinearLayout>
+                        android:layout_height="44dp"
+                        android:layout_marginTop="14dp"
+                        android:text="Run Intent Fuzzer (Shizuku)"
+                        android:textAllCaps="false"
+                        android:textSize="13sp"
+                        android:textColor="#0D0D0D"
+                        android:fontFamily="sans-serif-medium"
+                        app:backgroundTint="#FF6A00"
+                        app:cornerRadius="22dp"
+                        app:elevation="0dp" />
 
                     <TextView
-                        android:id="@+id/tvFingerprint"
+                        android:id="@+id/tvFuzzResults"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:paddingStart="18dp"
-                        android:paddingEnd="18dp"
-                        android:paddingBottom="18dp"
-                        android:text="—"
+                        android:layout_marginTop="12dp"
+                        android:text=""
                         android:textColor="#F5F5F5"
                         android:textSize="11sp"
                         android:fontFamily="monospace"
-                        android:lineSpacingExtra="4dp"
+                        android:lineSpacingExtra="3dp"
                         android:visibility="gone" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- ============ RAW MANIFEST (collapsible) ============ -->
+            <!-- ============ RAW MANIFEST ============ -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -939,7 +1232,8 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:orientation="vertical">
+                    android:orientation="vertical"
+                    android:animateLayoutChanges="true">
 
                     <LinearLayout
                         android:id="@+id/headerRawManifest"

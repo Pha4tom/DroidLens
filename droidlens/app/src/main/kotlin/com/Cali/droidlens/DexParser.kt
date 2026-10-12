@@ -3,12 +3,6 @@ package com.Cali.droidlens
 import java.io.File
 import java.util.zip.ZipFile
 
-/**
- * Extracts class names directly from DEX files in an APK.
- * No decompilation — just reads the DEX header tables.
- *
- * For multi-dex APKs, processes classes.dex, classes2.dex, etc.
- */
 object DexParser {
 
     data class DexFileInfo(
@@ -25,18 +19,22 @@ object DexParser {
         val appClasses: List<String>
     )
 
+    /** Safety cap — refuse to process dex files larger than this. */
+    private const val MAX_DEX_BYTES = 100L * 1024 * 1024  // 100 MB
+
     fun analyze(apk: File): Summary {
         val dexInfos = mutableListOf<DexFileInfo>()
 
         try {
             ZipFile(apk).use { zip ->
                 val dexEntries = zip.entries().asSequence()
-                    .filter { it.name.matches(Regex("classes\\d*\\.dex")) }
+                    .filter { it.name.matches(Regex("""classes\d*\.dex""")) }
                     .sortedBy { it.name }
                     .toList()
 
                 for (entry in dexEntries) {
                     try {
+                        if (entry.size > MAX_DEX_BYTES) continue
                         val bytes = zip.getInputStream(entry).readBytes()
                         val info = parseDex(bytes, entry.name)
                         if (info != null) dexInfos.add(info)
@@ -47,7 +45,6 @@ object DexParser {
 
         val totalClasses = dexInfos.sumOf { it.classCount }
 
-        // Top-level package counts (first 2 segments)
         val pkgCounts = mutableMapOf<String, Int>()
         for (dex in dexInfos) {
             for (cls in dex.classNames) {
@@ -57,7 +54,6 @@ object DexParser {
         }
         val topPackages = pkgCounts.toList().sortedByDescending { it.second }
 
-        // App-specific classes (exclude common library prefixes)
         val libraryPrefixes = listOf(
             "androidx.", "android.", "kotlin.", "kotlinx.", "com.google.",
             "com.android.", "org.jetbrains.", "org.intellij.", "org.chromium.",
@@ -90,34 +86,40 @@ object DexParser {
         val version = magic.substring(4, 7)
 
         val stringIdsSize = u32(data, 56)
-        val stringIdsOff  = u32(data, 60)
-        val typeIdsSize   = u32(data, 64)
-        val typeIdsOff    = u32(data, 68)
+        val stringIdsOff = u32(data, 60)
+        val typeIdsSize = u32(data, 64)
+        val typeIdsOff = u32(data, 68)
         val classDefsSize = u32(data, 96)
-        val classDefsOff  = u32(data, 100)
+        val classDefsOff = u32(data, 100)
 
-        if (stringIdsOff < 0 || stringIdsSize <= 0) return null
-        if (stringIdsOff + stringIdsSize * 4 > data.size) return null
-        if (typeIdsOff + typeIdsSize * 4 > data.size) return null
-        if (classDefsOff + classDefsSize * 32 > data.size) return null
+        // Use Long math to avoid Int overflow on crafted DEX
+        if (stringIdsOff < 0L || stringIdsSize <= 0L) return null
+        if (stringIdsOff + stringIdsSize * 4L > data.size) return null
+        if (typeIdsOff + typeIdsSize * 4L > data.size) return null
+        if (classDefsOff + classDefsSize * 32L > data.size) return null
 
-        val stringOffsets = IntArray(stringIdsSize)
-        for (i in 0 until stringIdsSize) {
-            stringOffsets[i] = u32(data, stringIdsOff + i * 4)
+        // Cap how many entries we'll even attempt (Int cap — safe)
+        val stringCount = stringIdsSize.coerceAtMost(500_000)
+        val typeCount = typeIdsSize.coerceAtMost(500_000)
+        val classDefsCount = classDefsSize.coerceAtMost(500_000)
+
+        val stringOffsets = IntArray(stringCount)
+        for (i in 0 until stringCount) {
+            stringOffsets[i] = u32(data, (stringIdsOff + i * 4L).toInt())
         }
 
-        val typeDescriptorIdx = IntArray(typeIdsSize)
-        for (i in 0 until typeIdsSize) {
-            typeDescriptorIdx[i] = u32(data, typeIdsOff + i * 4)
+        val typeDescriptorIdx = IntArray(typeCount)
+        for (i in 0 until typeCount) {
+            typeDescriptorIdx[i] = u32(data, (typeIdsOff + i * 4L).toInt())
         }
 
-        val classNames = ArrayList<String>(classDefsSize)
-        for (i in 0 until classDefsSize) {
-            val classDefOff = classDefsOff + i * 32
+        val classNames = ArrayList<String>(classDefsCount)
+        for (i in 0 until classDefsCount) {
+            val classDefOff = (classDefsOff + i * 32L).toInt()
             val classIdx = u32(data, classDefOff)
-            if (classIdx < 0 || classIdx >= typeIdsSize) continue
+            if (classIdx < 0 || classIdx >= typeCount) continue
             val descriptorIdx = typeDescriptorIdx[classIdx]
-            if (descriptorIdx < 0 || descriptorIdx >= stringIdsSize) continue
+            if (descriptorIdx < 0 || descriptorIdx >= stringCount) continue
             val descriptor = readStringAt(data, stringOffsets[descriptorIdx]) ?: continue
             val cleaned = cleanDescriptor(descriptor)
             if (cleaned.isNotEmpty()) classNames.add(cleaned)
@@ -126,7 +128,6 @@ object DexParser {
         return DexFileInfo(fileName, version, classNames.size, classNames)
     }
 
-    /** "Lcom/example/MainActivity;" → "com.example.MainActivity" */
     private fun cleanDescriptor(descriptor: String): String {
         var s = descriptor
         if (s.startsWith("L")) s = s.substring(1)
@@ -134,7 +135,6 @@ object DexParser {
         return s.replace('/', '.')
     }
 
-    /** "com.example.bet.ui.MainActivity" → "com.example" */
     private fun topPackage(className: String): String {
         val parts = className.split('.')
         return when {
@@ -144,28 +144,53 @@ object DexParser {
         }
     }
 
-    /** Reads a MUTF-8 / UTF-8 string at the given byte offset in the DEX data. */
+    /**
+     * Reads a DEX string at the given offset.
+     *
+     * DEX uses MUTF-8 with a uleb128 length prefix. The length counts UTF-16
+     * code units, NOT bytes — so we can't use it as a byte count. Instead we
+     * read the uleb128, then read bytes until a null terminator (the actual
+     * string terminator in DEX).
+     */
     private fun readStringAt(data: ByteArray, offset: Int): String? {
         if (offset < 0 || offset >= data.size) return null
         var pos = offset
 
-        // uleb128 length prefix
-        var length = 0
+        // Read uleb128 length — we use it only as an upper bound
+        var length = 0L
         var shift = 0
         var bytesRead = 0
         while (true) {
             if (pos >= data.size || bytesRead >= 5) return null
             val b = data[pos].toInt() and 0xFF
             pos++
-            length = length or ((b and 0x7F) shl shift)
+            length = length or ((b and 0x7F).toLong() shl shift)
             shift += 7
             bytesRead++
             if ((b and 0x80) == 0) break
         }
-        if (pos + length > data.size) return null
-        if (length > 4096) return null  // sanity cap
+        if (length < 0 || length > 1_000_000L) return null
 
-        return String(data, pos, length, Charsets.UTF_8)
+        // Now find the actual byte range: skip the uleb128, read until null
+        pos = offset
+        var skip = 0
+        while (skip < 5 && pos < data.size) {
+            val b = data[pos].toInt() and 0xFF
+            pos++
+            skip++
+            if ((b and 0x80) == 0) break
+        }
+        val byteStart = pos
+        var byteEnd = pos
+        while (byteEnd < data.size && data[byteEnd].toInt() != 0) {
+            byteEnd++
+            if (byteEnd - byteStart > 4_000_000) break
+        }
+        return try {
+            String(data, byteStart, byteEnd - byteStart, Charsets.UTF_8)
+        } catch (_: Throwable) {
+            null
+        }
     }
 
     private fun u32(data: ByteArray, off: Int): Int {
@@ -175,8 +200,6 @@ object DexParser {
                ((data[off + 2].toInt() and 0xFF) shl 16) or
                ((data[off + 3].toInt() and 0xFF) shl 24)
     }
-
-    // ---------- Formatting ----------
 
     fun format(s: Summary): String = buildString {
         if (s.dexFiles.isEmpty()) {

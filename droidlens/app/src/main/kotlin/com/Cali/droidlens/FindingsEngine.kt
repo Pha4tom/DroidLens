@@ -17,9 +17,6 @@ object FindingsEngine {
         val category: String,
     )
 
-    // ---------------------------------------------------------------
-    // Entry point
-    // ---------------------------------------------------------------
     fun analyze(
         xml: String,
         info: ManifestInfo.Info,
@@ -31,23 +28,23 @@ object FindingsEngine {
         checkSigning(fingerprint, findings)
         checkManifestFlags(info, findings)
         checkPermissions(info, findings)
+        checkAccessibilityServices(xml, findings)   // NEW
         checkExportedComponents(exported, findings)
         checkSdks(xml, findings)
         checkSdkVersions(info, findings)
 
-        // Sort by severity descending
         return findings.sortedBy { it.severity.ordinal }
     }
 
-    // ---------------------------------------------------------------
-    // Signing checks
-    // ---------------------------------------------------------------
+    // ---------- Signing ----------
     private fun checkSigning(fp: ApkFingerprint.Fingerprint, out: MutableList<Finding>) {
+        if (fp.error != null) return   // can't judge — UI already flags incomplete
+
         if (fp.signers.isEmpty()) {
             out.add(Finding(
                 Severity.MEDIUM,
                 "No extractable signing certificate",
-                fp.signingNote ?: "APK may use v2/v3 signing only, or not be signed.",
+                fp.signingNote ?: "APK is not signed or uses an unrecognized scheme.",
                 "Signing"
             ))
             return
@@ -56,54 +53,33 @@ object FindingsEngine {
         for (s in fp.signers) {
             val subject = s.subject
 
-            // Debug key
             if (subject.contains("CN=Android Debug", ignoreCase = true) ||
-                subject.contains("O=Android", ignoreCase = true) && subject.contains("C=US", ignoreCase = true)) {
+                (subject.contains("O=Android", ignoreCase = true) && subject.contains("C=US", ignoreCase = true))) {
                 out.add(Finding(
                     Severity.HIGH,
                     "Signed with Android Debug key",
-                    "The APK is signed with the developer's debug certificate. This means it was not prepared for release.",
+                    "This APK is signed with the developer's debug certificate. It was not prepared for release.",
                     "Signing"
                 ))
             }
 
-            // Expired cert
+            // Cert expiry is not enforced by Android at install — downgrade to INFO
             try {
                 val fmt = java.text.SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", java.util.Locale.US)
                 val validTo = fmt.parse(s.validTo)
                 if (validTo != null && validTo.before(java.util.Date())) {
                     out.add(Finding(
-                        Severity.HIGH,
-                        "Signing certificate is expired",
-                        "Certificate expired on ${s.validTo}.",
+                        Severity.LOW,
+                        "Signing certificate expired",
+                        "Certificate expired on ${s.validTo}. Android does not enforce cert expiry at install, but this may indicate an abandoned build.",
                         "Signing"
                     ))
-                }
-            } catch (_: Throwable) { }
-
-            // Very long cert validity (>30 years) is unusual for release keys
-            try {
-                val fmt = java.text.SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", java.util.Locale.US)
-                val from = fmt.parse(s.validFrom)
-                val to = fmt.parse(s.validTo)
-                if (from != null && to != null) {
-                    val years = (to.time - from.time) / (1000L * 60 * 60 * 24 * 365)
-                    if (years > 30) {
-                        out.add(Finding(
-                            Severity.LOW,
-                            "Unusually long certificate validity",
-                            "Validity period is ~$years years. Some malware families use self-signed keys with long validity.",
-                            "Signing"
-                        ))
-                    }
                 }
             } catch (_: Throwable) { }
         }
     }
 
-    // ---------------------------------------------------------------
-    // Manifest flags
-    // ---------------------------------------------------------------
+    // ---------- Manifest flags ----------
     private fun checkManifestFlags(info: ManifestInfo.Info, out: MutableList<Finding>) {
         if (info.debuggable) {
             out.add(Finding(
@@ -124,9 +100,7 @@ object FindingsEngine {
         }
     }
 
-    // ---------------------------------------------------------------
-    // Permission checks
-    // ---------------------------------------------------------------
+    // ---------- Permission checks ----------
     private val dangerousPermissions = mapOf(
         "android.permission.SYSTEM_ALERT_WINDOW" to
                 Finding(Severity.HIGH, "Can draw over other apps",
@@ -135,10 +109,6 @@ object FindingsEngine {
         "android.permission.REQUEST_INSTALL_PACKAGES" to
                 Finding(Severity.HIGH, "Can install other APKs",
                     "Dropper pattern. App can silently prompt install of arbitrary packages.", "Permission"),
-
-        "android.permission.BIND_ACCESSIBILITY_SERVICE" to
-                Finding(Severity.CRITICAL, "Declares an Accessibility Service",
-                    "Accessibility services can read screen content and inject input. Extremely high-risk capability.", "Permission"),
 
         "android.permission.SEND_SMS" to
                 Finding(Severity.HIGH, "Can send SMS",
@@ -176,7 +146,6 @@ object FindingsEngine {
             if (set.contains(perm)) out.add(finding)
         }
 
-        // Combos
         if (set.contains("android.permission.SYSTEM_ALERT_WINDOW") &&
             set.contains("android.permission.RECEIVE_BOOT_COMPLETED")) {
             out.add(Finding(
@@ -198,24 +167,65 @@ object FindingsEngine {
         }
     }
 
-    // ---------------------------------------------------------------
-    // Exported components
-    // ---------------------------------------------------------------
+    // ---------- Accessibility services (NEW) ----------
+    /**
+     * Accessibility services are declared as <service android:permission=
+     * "android.permission.BIND_ACCESSIBILITY_SERVICE"> — NOT as a <uses-permission>.
+     * So we scan the decoded XML for <service> blocks with that attribute.
+     */
+    private fun checkAccessibilityServices(xml: String, out: MutableList<Finding>) {
+        val serviceBlocks = Regex("""<service\b[^>]*>""", RegexOption.DOT_MATCHES_ALL)
+            .findAll(xml)
+            .map { it.value }
+            .toList()
+
+        var found = false
+        for (block in serviceBlocks) {
+            if (block.contains("BIND_ACCESSIBILITY_SERVICE", ignoreCase = true)) {
+                found = true
+                break
+            }
+        }
+
+        // Also catch the intent action, which is the runtime declaration
+        if (!found && xml.contains("android.accessibilityservice.AccessibilityService", ignoreCase = true)) {
+            found = true
+        }
+
+        if (found) {
+            out.add(Finding(
+                Severity.CRITICAL,
+                "Declares an Accessibility Service",
+                "Accessibility services can read screen content, capture keystrokes, and inject input on behalf of the user. " +
+                        "This is the single most abused capability in Android malware.",
+                "Capability"
+            ))
+        }
+    }
+
+    // ---------- Exported components ----------
     private fun checkExportedComponents(
         exported: List<ExportedComponents.Component>,
         out: MutableList<Finding>
     ) {
+        var realThirdPartyCount = 0
+
         for (c in exported) {
-            // Only flag exported items that are NOT protected by a permission
-            // and are NOT framework components (AndroidX, Google, etc.)
             val pkg = c.name.lowercase()
 
-            val isFramework = pkg.startsWith("androidx.") ||
-                              pkg.startsWith("com.google.") ||
-                              pkg.startsWith("com.android.") ||
-                              pkg.startsWith("org.chromium.")
+            // Skip framework-provided components
+            if (isFramework(pkg)) continue
 
-            if (isFramework) continue
+            // Skip launcher activities — exporting them is mandatory
+            val isLauncherActivity = c.kind == "activity" &&
+                    (c.actions.any { it.contains("MAIN") } ||
+                     c.categories.any { it.contains("LAUNCHER") })
+            if (isLauncherActivity) continue
+
+            // Skip providers protected by any permission (readPermission/writePermission/permission)
+            if (c.kind == "provider" && c.permission != null) continue
+
+            realThirdPartyCount++
 
             if (c.permission == null) {
                 val sev = when (c.kind) {
@@ -226,34 +236,31 @@ object FindingsEngine {
                 out.add(Finding(
                     sev,
                     "Exported ${c.kind} without permission",
-                    "${c.name} is reachable from any app on the device with no permission gate.",
+                    "${c.name} is reachable from any other app on the device with no permission gate.",
                     "Attack Surface"
                 ))
-            } else {
-                // Exported with a permission — worth an info note if it's a normal-level perm
-                if (c.permission.startsWith("android.permission.") &&
-                    c.permission in setOf(
-                        "android.permission.INTERNET",
-                        "android.permission.ACCESS_NETWORK_STATE",
-                    )) {
-                    // Skip — these are trivially held by any app
-                }
             }
         }
 
-        if (exported.none { !it.name.startsWith("androidx.") && !it.name.startsWith("com.google.") }) {
+        if (realThirdPartyCount == 0) {
             out.add(Finding(
                 Severity.INFO,
                 "No third-party exported components",
-                "All exported components are framework libraries. Attack surface is minimal.",
+                "All exported components are framework libraries or launcher entries. Attack surface is minimal.",
                 "Attack Surface"
             ))
         }
     }
 
-    // ---------------------------------------------------------------
-    // SDK detection
-    // ---------------------------------------------------------------
+    /** Same check used in the loop above — keep the two in sync. */
+    private fun isFramework(lowercasedClassName: String): Boolean =
+        lowercasedClassName.startsWith("androidx.") ||
+        lowercasedClassName.startsWith("com.google.") ||
+        lowercasedClassName.startsWith("com.android.") ||
+        lowercasedClassName.startsWith("org.chromium.") ||
+        lowercasedClassName.startsWith("android.support.")
+
+    // ---------- SDK detection ----------
     private val knownSdks = listOf(
         Triple("com.google.firebase", "Firebase", Severity.LOW),
         Triple("com.google.android.gms", "Google Play Services", Severity.INFO),
@@ -289,9 +296,7 @@ object FindingsEngine {
         }
     }
 
-    // ---------------------------------------------------------------
-    // SDK versions
-    // ---------------------------------------------------------------
+    // ---------- SDK versions ----------
     private fun checkSdkVersions(info: ManifestInfo.Info, out: MutableList<Finding>) {
         val target = info.targetSdk.toIntOrNull()
         val min = info.minSdk.toIntOrNull()
@@ -315,9 +320,7 @@ object FindingsEngine {
         }
     }
 
-    // ---------------------------------------------------------------
-    // Formatting
-    // ---------------------------------------------------------------
+    // ---------- Formatting ----------
     fun format(findings: List<Finding>): String {
         if (findings.isEmpty()) return "No findings."
 

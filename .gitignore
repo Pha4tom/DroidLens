@@ -1,8 +1,8 @@
-*.iml
 .gradle/
 build/
-local.properties
+*.iml
 .idea/
-.DS_Store
-captures/
-.cxx/
+local.properties
+*.apk
+*.aab
+*.so
